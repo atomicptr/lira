@@ -4,6 +4,8 @@ No dependency, fast Rust eDSL for writing HTML
 
 ## Usage
 
+Get it from Cargo: [lira](https://crates.io/crates/lira)
+
 ```bash
 $ cargo add lira
 ```
