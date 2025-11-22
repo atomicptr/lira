@@ -344,3 +344,15 @@ fn test_hr_void_element() {
     let res = hr().render();
     assert_eq!("<hr />", res);
 }
+
+#[test]
+fn test_javascript_script() {
+    let res = script()
+        .type_("module")
+        .raw("import Something from 'library';\nSomething.doSomething();\n")
+        .render();
+    assert_eq!(
+        "<script type=\"module\">import Something from 'library';\nSomething.doSomething();\n</script>",
+        res
+    );
+}

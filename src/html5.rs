@@ -300,6 +300,13 @@ pub fn link() -> Node<Void, Link> {
 impl HasHref for Node<Void, Link> {}
 impl HasRel for Node<Void, Link> {}
 
+impl Node<Void, Link> {
+    /// Specifies a Subresource Integrity value that allows browsers to verify what they fetch.
+    pub fn integrity(self, value: impl AsRef<str>) -> Self {
+        self.attr("integrity", value)
+    }
+}
+
 // <meta> — void element
 pub struct Meta;
 
@@ -929,3 +936,35 @@ pub fn base() -> Node<Void, Base> {
 
 impl HasHref for Node<Void, Base> {}
 impl HasTarget for Node<Void, Base> {}
+
+// <script>
+pub struct Script;
+
+pub fn script() -> Node<Open, Script> {
+    Node::new("script")
+}
+
+impl CanAddText for Script {}
+impl HasSrc for Node<Open, Script> {}
+
+impl Node<Open, Script> {
+    /// Executes the script asynchronously.
+    pub fn async_(self) -> Self {
+        self.flag("async")
+    }
+
+    /// Indicates that the script should be executed after the page has been parsed.
+    pub fn defer(self) -> Self {
+        self.flag("defer")
+    }
+
+    /// Specifies a Subresource Integrity value that allows browsers to verify what they fetch.
+    pub fn integrity(self, value: impl AsRef<str>) -> Self {
+        self.attr("integrity", value)
+    }
+
+    /// Type of script: "importmap", "module", ...
+    pub fn type_(self, value: impl AsRef<str>) -> Self {
+        self.attr("type", value)
+    }
+}
