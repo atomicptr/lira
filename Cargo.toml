@@ -2,3 +2,10 @@
 name = "lira"
 version = "0.1.0"
 edition = "2024"
+authors = ["Christopher Kaster <me@atomicptr.de>"]
+categories = ["web-programming", "template-engine"]
+description = "No dependency, fast Rust eDSL for writing HTML"
+keywords = ["html", "web", "dsl", "markup", "template"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/atomicptr/lira"
