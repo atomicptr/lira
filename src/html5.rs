@@ -274,7 +274,10 @@ pub struct Html;
 
 /// Root element of an HTML document. All other elements must be descendants of this.
 pub fn html() -> Node<Open, Html> {
-    Node::new_with_prefix("html", "<!DOCTYPE html>")
+    // since this will be used for an entire page, make it big
+    let mut buf = Vec::with_capacity(2048);
+    buf.extend_from_slice(b"<!DOCTYPE html>");
+    Node::with_buffer("html", buf)
 }
 
 impl CanAddChildren for Html {}
@@ -797,6 +800,26 @@ pub fn pre() -> Node<Open, Pre> {
 
 impl CanAddChildren for Pre {}
 impl CanAddText for Pre {}
+
+// <a>
+pub struct A;
+
+/// Together with its href attribute, creates a hyperlink to web pages, files, email addresses, locations within the
+/// current page, or anything else a URL can address.
+pub fn a() -> Node<Open, A> {
+    Node::new("a")
+}
+
+impl CanAddChildren for A {}
+impl CanAddText for A {}
+impl HasHref for Node<Open, A> {}
+
+impl Node<Open, A> {
+    /// Indicates that the hyperlink is to be used for downloading a resource.
+    pub fn download(self) -> Self {
+        self.flag("download")
+    }
+}
 
 // <b>
 pub struct B;

@@ -29,35 +29,34 @@ pub trait CanAddText {}
 
 pub struct Node<State = Open, Tag = ()> {
     tag: &'static str,
-    buffer: String,
+    buf: Vec<u8>,
     _state: PhantomData<State>,
     _tag: PhantomData<Tag>,
 }
 
 impl<Tag> Node<Open, Tag> {
     pub fn new(tag: &'static str) -> Self {
-        Self::new_with_prefix(tag, "")
+        let buf = Vec::with_capacity(128);
+        Self::with_buffer(tag, buf)
     }
 
-    pub fn new_with_prefix(tag: &'static str, prefix: &'static str) -> Self {
-        let mut buffer = String::with_capacity(128);
-        buffer.push_str(prefix);
-        buffer.push('<');
-        buffer.push_str(tag);
+    pub fn with_buffer(tag: &'static str, mut buf: Vec<u8>) -> Self {
+        buf.push(b'<');
+        buf.extend_from_slice(tag.as_bytes());
 
         Node {
             tag,
-            buffer,
+            buf,
             _state: PhantomData,
             _tag: PhantomData,
         }
     }
 
     fn finish_start_tag(mut self) -> Node<Content, Tag> {
-        self.buffer.push('>');
+        self.buf.extend_from_slice(b">");
         Node {
             tag: self.tag,
-            buffer: self.buffer,
+            buf: self.buf,
             _state: PhantomData,
             _tag: PhantomData,
         }
@@ -73,17 +72,19 @@ where
     T: CanAddAttributes,
 {
     fn attr(mut self, k: impl Into<Cow<'static, str>>, v: impl AsRef<str>) -> Self {
-        self.buffer.push(' ');
-        self.buffer.push_str(normalize_attr_name(k).as_ref());
-        self.buffer.push_str("=\"");
-        self.buffer.push_str(&escape(v.as_ref()));
-        self.buffer.push('"');
+        self.buf.push(b' ');
+        self.buf
+            .extend_from_slice(normalize_attr_name(k).as_bytes());
+        self.buf.extend_from_slice(b"=\"");
+        write_escaped(&mut self.buf, v.as_ref());
+        self.buf.push(b'"');
         self
     }
 
     fn flag(mut self, k: impl Into<Cow<'static, str>>) -> Self {
-        self.buffer.push(' ');
-        self.buffer.push_str(normalize_attr_name(k).as_ref());
+        self.buf.push(b' ');
+        self.buf
+            .extend_from_slice(normalize_attr_name(k).as_bytes());
         self
     }
 }
@@ -94,6 +95,13 @@ where
 {
     pub fn child(self, child: impl IntoNode) -> Node<Content, Tag> {
         self.finish_start_tag().child(child)
+    }
+
+    pub fn child_when<Fn, T>(self, condition: bool, f: Fn) -> Node<Content, Tag>
+    where
+        Fn: FnOnce() -> Node<Content, T>,
+    {
+        self.finish_start_tag().child_when(condition, f)
     }
 }
 
@@ -110,27 +118,23 @@ where
     }
 }
 
-impl<Tag> Node<Open, Tag> {
-    pub fn render(self) -> String {
-        self.finish_start_tag().render()
-    }
-}
-
-impl<Tag> Node<Content, Tag> {
-    pub fn render(mut self) -> String {
-        self.buffer.push_str("</");
-        self.buffer.push_str(self.tag);
-        self.buffer.push('>');
-        self.buffer
-    }
-}
-
 impl<Tag> Node<Content, Tag>
 where
     Tag: CanAddChildren,
 {
     pub fn child(mut self, child: impl IntoNode) -> Node<Content, Tag> {
-        child.render_into(&mut self.buffer);
+        child.render_into(&mut self.buf);
+        self
+    }
+
+    pub fn child_when<Fn, T>(mut self, condition: bool, f: Fn) -> Self
+    where
+        Fn: FnOnce() -> Node<Content, T>,
+    {
+        if condition {
+            let child = f();
+            child.render_into(&mut self.buf);
+        }
         self
     }
 }
@@ -140,83 +144,111 @@ where
     Tag: CanAddText,
 {
     pub fn text(mut self, text: impl AsRef<str>) -> Self {
-        self.buffer.push_str(&escape(text.as_ref()));
+        write_escaped(&mut self.buf, text.as_ref());
         self
     }
 
     pub fn raw(mut self, text: impl AsRef<str>) -> Self {
-        self.buffer.push_str(text.as_ref());
+        self.buf.extend_from_slice(text.as_ref().as_bytes());
         self
     }
 }
 
 impl<Tag> Node<Void, Tag> {
     pub fn new_self_closing(tag: &'static str) -> Self {
-        let mut buffer = String::with_capacity(128);
-        buffer.push('<');
-        buffer.push_str(tag);
+        let mut buf = Vec::with_capacity(128);
+        buf.push(b'<');
+        buf.extend_from_slice(tag.as_bytes());
 
         Node {
             tag,
-            buffer,
+            buf,
             _state: PhantomData,
             _tag: PhantomData,
         }
     }
-
-    pub fn render(mut self) -> String {
-        self.buffer.push_str(" />");
-        self.buffer
-    }
 }
 
 pub trait IntoNode {
-    fn render_into(self, buf: &mut String);
+    fn render_into(self, buf: &mut Vec<u8>);
+
+    fn render(self) -> String;
 }
 
 impl<Tag> IntoNode for Node<Open, Tag> {
-    fn render_into(self, buf: &mut String) {
-        buf.push_str(&self.finish_start_tag().render());
+    fn render_into(self, buf: &mut Vec<u8>) {
+        self.finish_start_tag().render_into(buf);
+    }
+
+    fn render(self) -> String {
+        let mut buf = Vec::with_capacity(self.buf.capacity() + self.tag.len() + 3);
+        self.render_into(&mut buf);
+        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
     }
 }
 
 impl<Tag> IntoNode for Node<Content, Tag> {
-    fn render_into(self, buf: &mut String) {
-        buf.push_str(&self.render());
+    fn render_into(self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(&self.buf);
+
+        // close tag
+        buf.extend_from_slice(b"</");
+        buf.extend_from_slice(self.tag.as_bytes());
+        buf.push(b'>');
+    }
+
+    fn render(self) -> String {
+        let mut buf = Vec::with_capacity(self.buf.capacity() + self.tag.len() + 3);
+        self.render_into(&mut buf);
+        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
     }
 }
 
 impl<Tag> IntoNode for Node<Void, Tag> {
-    fn render_into(self, buf: &mut String) {
-        buf.push_str(&self.render());
+    fn render_into(self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(&self.buf);
+        buf.extend_from_slice(b" />");
+    }
+
+    fn render(self) -> String {
+        let mut buf = Vec::with_capacity(self.buf.capacity() + 3);
+        self.render_into(&mut buf);
+        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
     }
 }
 
-pub fn escape(input: &str) -> Cow<'_, str> {
-    let mut need_escape = false;
+#[inline(always)]
+pub fn write_escaped(dest: &mut Vec<u8>, src: &str) {
+    let bytes = src.as_bytes();
+    let mut i = 0;
 
-    for c in input.chars() {
-        if matches!(c, '&' | '<' | '>' | '"' | '\'') {
-            need_escape = true;
+    while i < bytes.len() {
+        let mut j = i;
+
+        while j < bytes.len() {
+            match bytes[j] {
+                b'&' | b'<' | b'>' | b'"' | b'\'' => break,
+                _ => j += 1,
+            }
+        }
+
+        if j > i {
+            dest.extend_from_slice(&bytes[i..j]);
+        }
+
+        if j == bytes.len() {
             break;
         }
-    }
 
-    if !need_escape {
-        return Cow::Borrowed(input);
-    }
-
-    let mut out = String::with_capacity(input.len());
-    for c in input.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#39;"),
-            _ => out.push(c),
+        match bytes[j] {
+            b'&' => dest.extend_from_slice(b"&amp;"),
+            b'<' => dest.extend_from_slice(b"&lt;"),
+            b'>' => dest.extend_from_slice(b"&gt;"),
+            b'"' => dest.extend_from_slice(b"&quot;"),
+            b'\'' => dest.extend_from_slice(b"&#39;"),
+            _ => unreachable!(),
         }
-    }
 
-    Cow::Owned(out)
+        i = j + 1;
+    }
 }

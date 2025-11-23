@@ -169,7 +169,10 @@ fn test_void_node_has_no_closing_tag() {
 
 #[test]
 fn test_escape_unicode_preserved() {
-    let res = escape("💡 < λ & > 😊").into_owned();
+    let mut buf = Vec::with_capacity(128);
+    write_escaped(&mut buf, "💡 < λ & > 😊");
+
+    let res = String::from_utf8(buf).expect("Invalid UTF-8");
     assert_eq!("💡 &lt; λ &amp; &gt; 😊", res);
 }
 
