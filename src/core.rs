@@ -28,7 +28,7 @@ pub trait CanAddChildren {}
 pub trait CanAddText {}
 
 pub struct Node<State = Open, Tag = ()> {
-    tag: &'static str,
+    tag: &'static [u8],
     buf: Vec<u8>,
     _state: PhantomData<State>,
     _tag: PhantomData<Tag>,
@@ -45,7 +45,7 @@ impl<Tag> Node<Open, Tag> {
         buf.extend_from_slice(tag.as_bytes());
 
         Node {
-            tag,
+            tag: tag.as_bytes(),
             buf,
             _state: PhantomData,
             _tag: PhantomData,
@@ -64,7 +64,18 @@ impl<Tag> Node<Open, Tag> {
 }
 
 pub fn normalize_attr_name(k: impl Into<Cow<'static, str>>) -> String {
-    k.into().to_lowercase().replace("_", "-")
+    k.into()
+        .chars()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                c.to_ascii_lowercase()
+            } else if c == '_' {
+                '-'
+            } else {
+                c
+            }
+        })
+        .collect()
 }
 
 impl<T, Tag> HasAttributes for Node<T, Tag>
@@ -161,7 +172,7 @@ impl<Tag> Node<Void, Tag> {
         buf.extend_from_slice(tag.as_bytes());
 
         Node {
-            tag,
+            tag: tag.as_bytes(),
             buf,
             _state: PhantomData,
             _tag: PhantomData,
@@ -193,7 +204,7 @@ impl<Tag> IntoNode for Node<Content, Tag> {
 
         // close tag
         buf.extend_from_slice(b"</");
-        buf.extend_from_slice(self.tag.as_bytes());
+        buf.extend_from_slice(self.tag);
         buf.push(b'>');
     }
 
@@ -221,34 +232,39 @@ impl<Tag> IntoNode for Node<Void, Tag> {
 pub fn write_escaped(dest: &mut Vec<u8>, src: &str) {
     let bytes = src.as_bytes();
     let mut i = 0;
+    let len = bytes.len();
 
-    while i < bytes.len() {
-        let mut j = i;
+    while i < len {
+        let b = bytes[i];
+        match b {
+            b'&' => {
+                dest.extend_from_slice(b"&amp;");
+            }
+            b'<' => {
+                dest.extend_from_slice(b"&lt;");
+            }
+            b'>' => {
+                dest.extend_from_slice(b"&gt;");
+            }
+            b'"' => {
+                dest.extend_from_slice(b"&quot;");
+            }
+            b'\'' => {
+                dest.extend_from_slice(b"&#39;");
+            }
+            _ => {
+                let start = i;
 
-        while j < bytes.len() {
-            match bytes[j] {
-                b'&' | b'<' | b'>' | b'"' | b'\'' => break,
-                _ => j += 1,
+                i += 1;
+
+                while i < len && !matches!(bytes[i], b'&' | b'<' | b'>' | b'"' | b'\'') {
+                    i += 1;
+                }
+
+                dest.extend_from_slice(&bytes[start..i]);
+                continue;
             }
         }
-
-        if j > i {
-            dest.extend_from_slice(&bytes[i..j]);
-        }
-
-        if j == bytes.len() {
-            break;
-        }
-
-        match bytes[j] {
-            b'&' => dest.extend_from_slice(b"&amp;"),
-            b'<' => dest.extend_from_slice(b"&lt;"),
-            b'>' => dest.extend_from_slice(b"&gt;"),
-            b'"' => dest.extend_from_slice(b"&quot;"),
-            b'\'' => dest.extend_from_slice(b"&#39;"),
-            _ => unreachable!(),
-        }
-
-        i = j + 1;
+        i += 1;
     }
 }
