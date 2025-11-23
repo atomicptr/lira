@@ -192,9 +192,7 @@ impl<Tag> IntoNode for Node<Open, Tag> {
     }
 
     fn render(self) -> String {
-        let mut buf = Vec::with_capacity(self.buf.capacity() + self.tag.len() + 3);
-        self.render_into(&mut buf);
-        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
+        self.finish_start_tag().render()
     }
 }
 
