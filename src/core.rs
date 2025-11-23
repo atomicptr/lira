@@ -104,7 +104,7 @@ impl<Tag> Node<Open, Tag>
 where
     Tag: CanAddChildren,
 {
-    pub fn child(self, child: impl IntoNode) -> Node<Content, Tag> {
+    pub fn child(self, child: impl Renderable) -> Node<Content, Tag> {
         self.finish_start_tag().child(child)
     }
 
@@ -133,7 +133,7 @@ impl<Tag> Node<Content, Tag>
 where
     Tag: CanAddChildren,
 {
-    pub fn child(mut self, child: impl IntoNode) -> Node<Content, Tag> {
+    pub fn child(mut self, child: impl Renderable) -> Node<Content, Tag> {
         child.render_into(&mut self.buf);
         self
     }
@@ -180,13 +180,13 @@ impl<Tag> Node<Void, Tag> {
     }
 }
 
-pub trait IntoNode {
+pub trait Renderable {
     fn render_into(self, buf: &mut Vec<u8>);
 
     fn render(self) -> String;
 }
 
-impl<Tag> IntoNode for Node<Open, Tag> {
+impl<Tag> Renderable for Node<Open, Tag> {
     fn render_into(self, buf: &mut Vec<u8>) {
         self.finish_start_tag().render_into(buf);
     }
@@ -196,7 +196,7 @@ impl<Tag> IntoNode for Node<Open, Tag> {
     }
 }
 
-impl<Tag> IntoNode for Node<Content, Tag> {
+impl<Tag> Renderable for Node<Content, Tag> {
     fn render_into(self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.buf);
 
@@ -213,7 +213,7 @@ impl<Tag> IntoNode for Node<Content, Tag> {
     }
 }
 
-impl<Tag> IntoNode for Node<Void, Tag> {
+impl<Tag> Renderable for Node<Void, Tag> {
     fn render_into(self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.buf);
         buf.extend_from_slice(b" />");
