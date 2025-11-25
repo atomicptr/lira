@@ -52,7 +52,7 @@ impl<Tag> Node<Open, Tag> {
         }
     }
 
-    fn finish_start_tag(mut self) -> Node<Content, Tag> {
+    pub fn close(mut self) -> Node<Content, Tag> {
         self.buf.extend_from_slice(b">");
         Node {
             tag: self.tag,
@@ -105,14 +105,14 @@ where
     Tag: CanAddChildren,
 {
     pub fn child(self, child: impl Renderable) -> Node<Content, Tag> {
-        self.finish_start_tag().child(child)
+        self.close().child(child)
     }
 
     pub fn child_when<Fn, T>(self, condition: bool, f: Fn) -> Node<Content, Tag>
     where
         Fn: FnOnce() -> Node<Content, T>,
     {
-        self.finish_start_tag().child_when(condition, f)
+        self.close().child_when(condition, f)
     }
 }
 
@@ -121,11 +121,11 @@ where
     Tag: CanAddText,
 {
     pub fn text(self, text: impl AsRef<str>) -> Node<Content, Tag> {
-        self.finish_start_tag().text(text.as_ref())
+        self.close().text(text.as_ref())
     }
 
     pub fn raw(self, text: impl AsRef<str>) -> Node<Content, Tag> {
-        self.finish_start_tag().raw(text.as_ref())
+        self.close().raw(text.as_ref())
     }
 }
 
@@ -188,11 +188,11 @@ pub trait Renderable {
 
 impl<Tag> Renderable for Node<Open, Tag> {
     fn render_into(self, buf: &mut Vec<u8>) {
-        self.finish_start_tag().render_into(buf);
+        self.close().render_into(buf);
     }
 
     fn render(self) -> String {
-        self.finish_start_tag().render()
+        self.close().render()
     }
 }
 

@@ -359,3 +359,17 @@ fn test_javascript_script() {
         res
     );
 }
+
+#[test]
+fn test_manually_closing_element() {
+    let mut elem = div().class("root").close();
+
+    for i in [1, 2, 3, 4, 5] {
+        elem = elem.child(div().text(i.to_string()));
+    }
+
+    assert_eq!(
+        "<div class=\"root\"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div></div>",
+        elem.render()
+    );
+}
