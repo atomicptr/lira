@@ -1019,3 +1019,68 @@ pub fn li() -> Node<Li, Open> {
 
 impl CanAddChildren for Li {}
 impl CanAddText for Li {}
+
+// <table>
+pub struct Table;
+
+pub fn table() -> Node<Table, Open> {
+    Node::new("table")
+}
+
+impl CanAddChildren for Table {}
+
+// <thead>
+pub struct THead;
+
+pub fn thead() -> Node<THead, Open> {
+    Node::new("thead")
+}
+
+impl CanAddChildren for THead {}
+
+// <tbody>
+pub struct TBody;
+
+pub fn tbody() -> Node<TBody, Open> {
+    Node::new("tbody")
+}
+
+impl CanAddChildren for TBody {}
+
+// <tfoot>
+pub struct TFoot;
+
+pub fn tfoot() -> Node<TFoot, Open> {
+    Node::new("tfoot")
+}
+
+impl CanAddChildren for TFoot {}
+
+// <tr>
+pub struct Tr;
+
+pub fn tr() -> Node<Tr, Open> {
+    Node::new("tr")
+}
+
+impl CanAddChildren for Tr {}
+
+// <th>
+pub struct Th;
+
+pub fn th() -> Node<Th, Open> {
+    Node::new("th")
+}
+
+impl CanAddChildren for Th {}
+impl CanAddText for Th {}
+
+// <td>
+pub struct Td;
+
+pub fn td() -> Node<Td, Open> {
+    Node::new("td")
+}
+
+impl CanAddChildren for Td {}
+impl CanAddText for Td {}

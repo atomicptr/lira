@@ -439,3 +439,61 @@ fn test_layout_wrapping() {
     let res = div().text("Content").map(|n| layout(n)).render();
     assert_eq!("<div id=\"layout\"><div>Content</div></div>", res);
 }
+
+#[test]
+fn test_basic_table() {
+    let res = table()
+        .child(thead().child(tr().child(th().text("Name")).child(th().text("Age"))))
+        .child(
+            tbody()
+                .child(tr().child(td().text("Alice")).child(td().text("30")))
+                .child(tr().child(td().text("Bob")).child(td().text("25"))),
+        )
+        .render();
+
+    assert_eq!(
+        "<table><thead><tr><th>Name</th><th>Age</th></tr></thead><tbody><tr><td>Alice</td><td>30</td></tr><tr><td>Bob</td><td>25</td></tr></tbody></table>",
+        res
+    );
+}
+
+#[test]
+fn test_table_with_tfoot() {
+    let res = table()
+        .child(thead().child(tr().child(th().text("Item")).child(th().text("Price"))))
+        .child(tbody().child(tr().child(td().text("Book")).child(td().text("$10"))))
+        .child(tfoot().child(tr().child(td().text("Total")).child(td().text("$10"))))
+        .render();
+
+    assert_eq!(
+        "<table><thead><tr><th>Item</th><th>Price</th></tr></thead><tbody><tr><td>Book</td><td>$10</td></tr></tbody><tfoot><tr><td>Total</td><td>$10</td></tr></tfoot></table>",
+        res
+    );
+}
+
+#[test]
+fn test_ul_li_nesting() {
+    let res = ul()
+        .child(li().text("One"))
+        .child(li().text("Two"))
+        .child(li().child(ul().child(li().text("2.1")).child(li().text("2.2"))))
+        .render();
+
+    assert_eq!(
+        "<ul><li>One</li><li>Two</li><li><ul><li>2.1</li><li>2.2</li></ul></li></ul>",
+        res
+    );
+}
+
+#[test]
+fn test_mixed_table_and_ul() {
+    let res = div()
+        .child(table().child(tr().child(td().text("Menu"))))
+        .child(ul().child(li().text("Home")).child(li().text("About")))
+        .render();
+
+    assert_eq!(
+        "<div><table><tr><td>Menu</td></tr></table><ul><li>Home</li><li>About</li></ul></div>",
+        res
+    );
+}
