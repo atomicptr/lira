@@ -100,12 +100,56 @@ where
     }
 }
 
+impl<Tag> Node<Content, Tag>
+where
+    Tag: CanAddChildren,
+{
+    pub fn child(mut self, child: impl Renderable) -> Node<Content, Tag> {
+        child.render_into(&mut self.buf);
+        self
+    }
+
+    pub fn children<It, Fn, T, R>(mut self, iter: It, mut fun: Fn) -> Self
+    where
+        It: IntoIterator<Item = T>,
+        Fn: FnMut(T) -> R,
+        R: Renderable,
+    {
+        for item in iter {
+            let elem = fun(item);
+            elem.render_into(&mut self.buf);
+        }
+
+        self
+    }
+
+    pub fn child_when<Fn, T>(mut self, condition: bool, f: Fn) -> Self
+    where
+        Fn: FnOnce() -> Node<Content, T>,
+    {
+        if condition {
+            let child = f();
+            child.render_into(&mut self.buf);
+        }
+        self
+    }
+}
+
 impl<Tag> Node<Open, Tag>
 where
     Tag: CanAddChildren,
 {
     pub fn child(self, child: impl Renderable) -> Node<Content, Tag> {
         self.close().child(child)
+    }
+
+    pub fn children<It, Fn, T, R>(self, iter: It, fun: Fn) -> Node<Content, Tag>
+    where
+        It: IntoIterator<Item = T>,
+        Fn: FnMut(T) -> R,
+        R: Renderable,
+    {
+        self.close().children(iter, fun)
     }
 
     pub fn child_when<Fn, T>(self, condition: bool, f: Fn) -> Node<Content, Tag>
@@ -126,27 +170,6 @@ where
 
     pub fn raw(self, text: impl AsRef<str>) -> Node<Content, Tag> {
         self.close().raw(text.as_ref())
-    }
-}
-
-impl<Tag> Node<Content, Tag>
-where
-    Tag: CanAddChildren,
-{
-    pub fn child(mut self, child: impl Renderable) -> Node<Content, Tag> {
-        child.render_into(&mut self.buf);
-        self
-    }
-
-    pub fn child_when<Fn, T>(mut self, condition: bool, f: Fn) -> Self
-    where
-        Fn: FnOnce() -> Node<Content, T>,
-    {
-        if condition {
-            let child = f();
-            child.render_into(&mut self.buf);
-        }
-        self
     }
 }
 

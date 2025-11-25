@@ -373,3 +373,16 @@ fn test_manually_closing_element() {
         elem.render()
     );
 }
+
+#[test]
+fn test_children_func() {
+    let res = div()
+        .class("root")
+        .children([1, 2, 3, 4, 5], |item| div().text(item.to_string()))
+        .render();
+
+    assert_eq!(
+        "<div class=\"root\"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div></div>",
+        res
+    );
+}
