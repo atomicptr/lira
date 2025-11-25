@@ -386,3 +386,43 @@ fn test_children_func() {
         res
     );
 }
+
+#[test]
+fn test_map() {
+    let res = div()
+        .class("root")
+        .children([1, 2, 3, 4, 5], |item| {
+            div()
+                .map(|n| {
+                    if item % 2 == 0 {
+                        n.class("even")
+                    } else {
+                        n.class("odd")
+                    }
+                })
+                .text(item.to_string())
+        })
+        .render();
+
+    assert_eq!(
+        "<div class=\"root\"><div class=\"odd\">1</div><div class=\"even\">2</div><div class=\"odd\">3</div><div class=\"even\">4</div><div class=\"odd\">5</div></div>",
+        res
+    );
+}
+
+#[test]
+fn test_map_when() {
+    let res = div()
+        .class("root")
+        .children([1, 2, 3, 4, 5], |item| {
+            div()
+                .map_when(item % 2 == 0, |n| n.class("even"))
+                .text(item.to_string())
+        })
+        .render();
+
+    assert_eq!(
+        "<div class=\"root\"><div>1</div><div class=\"even\">2</div><div>3</div><div class=\"even\">4</div><div>5</div></div>",
+        res
+    );
+}

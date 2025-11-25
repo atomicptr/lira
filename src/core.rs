@@ -78,6 +78,22 @@ pub fn normalize_attr_name(k: impl Into<Cow<'static, str>>) -> String {
         .collect()
 }
 
+impl<State, Tag> Node<State, Tag> {
+    pub fn map<Fn>(self, fun: Fn) -> Self
+    where
+        Fn: FnOnce(Self) -> Self,
+    {
+        fun(self)
+    }
+
+    pub fn map_when<Fn>(self, condition: bool, fun: Fn) -> Self
+    where
+        Fn: FnOnce(Self) -> Self,
+    {
+        if condition { fun(self) } else { self }
+    }
+}
+
 impl<T, Tag> HasAttributes for Node<T, Tag>
 where
     T: CanAddAttributes,
