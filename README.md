@@ -40,14 +40,15 @@ fn counter_button(value: i32) -> impl Renderable {
 }
 
 fn page() -> impl Renderable {
-    layout(
-        div()
-            .class("card bg-base-200")
-            .child(div()
-                .class("card-body")
-                .child( h1().class("text-2xl").text("lira"))
-                .child(p().text("No dependency fast Rust eDSL for writing HTML"))
-                .child(counter_button(1))))
+    div()
+        .class("card bg-base-200")
+        .child(div()
+            .class("card-body")
+            .child(h1().class("text-2xl").text("lira"))
+            .child(p().text("No dependency fast Rust eDSL for writing HTML"))
+            .child(counter_button(1)))
+        // wrap content into layout
+        .map(|node| layout(node))
 }
 
 // we use axum here as an example
