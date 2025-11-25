@@ -85,8 +85,8 @@ pub trait HasGlobalAttributes: HasAttributes + Sized {
     }
 }
 
-impl<Tag> HasGlobalAttributes for Node<Open, Tag> {}
-impl<Tag> HasGlobalAttributes for Node<Void, Tag> {}
+impl<Tag> HasGlobalAttributes for Node<Tag, Open> {}
+impl<Tag> HasGlobalAttributes for Node<Tag, Void> {}
 
 pub trait HasHref: HasAttributes + Sized {
     /// The URL of the linked resource (absolute or relative).
@@ -273,7 +273,7 @@ pub enum FormMethod {
 pub struct Html;
 
 /// Root element of an HTML document. All other elements must be descendants of this.
-pub fn html() -> Node<Open, Html> {
+pub fn html() -> Node<Html, Open> {
     // since this will be used for an entire page, make it big
     let mut buf = Vec::with_capacity(2048);
     buf.extend_from_slice(b"<!DOCTYPE html>");
@@ -286,7 +286,7 @@ impl CanAddChildren for Html {}
 pub struct Head;
 
 /// Contains metadata about the document (title, links, meta, etc.).
-pub fn head() -> Node<Open, Head> {
+pub fn head() -> Node<Head, Open> {
     Node::new("head")
 }
 
@@ -296,14 +296,14 @@ impl CanAddChildren for Head {}
 pub struct Link;
 
 /// Specifies relationships between the current document and external resources (e.g. CSS, icons).
-pub fn link() -> Node<Void, Link> {
+pub fn link() -> Node<Link, Void> {
     Node::new_self_closing("link")
 }
 
-impl HasHref for Node<Void, Link> {}
-impl HasRel for Node<Void, Link> {}
+impl HasHref for Node<Link, Void> {}
+impl HasRel for Node<Link, Void> {}
 
-impl Node<Void, Link> {
+impl Node<Link, Void> {
     /// Specifies a Subresource Integrity value that allows browsers to verify what they fetch.
     pub fn integrity(self, value: impl AsRef<str>) -> Self {
         self.attr("integrity", value)
@@ -314,11 +314,11 @@ impl Node<Void, Link> {
 pub struct Meta;
 
 /// Represents metadata not covered by other elements.
-pub fn meta() -> Node<Void, Meta> {
+pub fn meta() -> Node<Meta, Void> {
     Node::new_self_closing("meta")
 }
 
-impl Node<Void, Meta> {
+impl Node<Meta, Void> {
     pub fn charset(self, value: impl AsRef<str>) -> Self {
         self.attr("charset", value)
     }
@@ -340,7 +340,7 @@ impl Node<Void, Meta> {
 pub struct Style;
 
 /// Contains CSS styling rules for the document.
-pub fn style() -> Node<Open, Style> {
+pub fn style() -> Node<Style, Open> {
     Node::new("style")
 }
 
@@ -351,7 +351,7 @@ impl CanAddChildren for Style {}
 pub struct Title;
 
 /// Defines the document title shown in browser tab/title bar.
-pub fn title() -> Node<Open, Title> {
+pub fn title() -> Node<Title, Open> {
     Node::new("title")
 }
 
@@ -361,7 +361,7 @@ impl CanAddText for Title {}
 pub struct Body;
 
 /// Represents the main content of the HTML document.
-pub fn body() -> Node<Open, Body> {
+pub fn body() -> Node<Body, Open> {
     Node::new("body")
 }
 
@@ -371,7 +371,7 @@ impl CanAddChildren for Body {}
 pub struct Div;
 
 /// Generic block-level container for grouping content.
-pub fn div() -> Node<Open, Div> {
+pub fn div() -> Node<Div, Open> {
     Node::new("div")
 }
 
@@ -382,7 +382,7 @@ impl CanAddText for Div {}
 pub struct Span;
 
 /// Generic inline container for phrasing content.
-pub fn span() -> Node<Open, Span> {
+pub fn span() -> Node<Span, Open> {
     Node::new("span")
 }
 
@@ -392,7 +392,7 @@ impl CanAddText for Span {}
 // <h1>
 pub struct H1;
 
-pub fn h1() -> Node<Open, H1> {
+pub fn h1() -> Node<H1, Open> {
     Node::new("h1")
 }
 
@@ -402,7 +402,7 @@ impl CanAddText for H1 {}
 // <h2>
 pub struct H2;
 
-pub fn h2() -> Node<Open, H2> {
+pub fn h2() -> Node<H2, Open> {
     Node::new("h2")
 }
 
@@ -412,7 +412,7 @@ impl CanAddText for H2 {}
 // <h3>
 pub struct H3;
 
-pub fn h3() -> Node<Open, H3> {
+pub fn h3() -> Node<H3, Open> {
     Node::new("h3")
 }
 
@@ -422,7 +422,7 @@ impl CanAddText for H3 {}
 // <h4>
 pub struct H4;
 
-pub fn h4() -> Node<Open, H4> {
+pub fn h4() -> Node<H4, Open> {
     Node::new("h4")
 }
 
@@ -432,7 +432,7 @@ impl CanAddText for H4 {}
 // <h5>
 pub struct H5;
 
-pub fn h5() -> Node<Open, H5> {
+pub fn h5() -> Node<H5, Open> {
     Node::new("h5")
 }
 
@@ -442,7 +442,7 @@ impl CanAddText for H5 {}
 // <h6>
 pub struct H6;
 
-pub fn h6() -> Node<Open, H6> {
+pub fn h6() -> Node<H6, Open> {
     Node::new("h6")
 }
 
@@ -453,7 +453,7 @@ impl CanAddText for H6 {}
 pub struct Paragraph;
 
 /// Represents a paragraph of text.
-pub fn p() -> Node<Open, Paragraph> {
+pub fn p() -> Node<Paragraph, Open> {
     Node::new("p")
 }
 
@@ -464,13 +464,13 @@ impl CanAddText for Paragraph {}
 pub struct Img;
 
 /// Embeds an image into the document.
-pub fn img() -> Node<Void, Img> {
+pub fn img() -> Node<Img, Void> {
     Node::new_self_closing("img")
 }
 
-impl HasSrc for Node<Void, Img> {}
+impl HasSrc for Node<Img, Void> {}
 
-impl Node<Void, Img> {
+impl Node<Img, Void> {
     /// Text description of the image, shown if image fails to load.
     pub fn alt(self, value: impl AsRef<str>) -> Self {
         self.attr("alt", value)
@@ -491,13 +491,13 @@ impl Node<Void, Img> {
 pub struct Form;
 
 /// Represents a form, used to collect user input.
-pub fn form() -> Node<Open, Form> {
+pub fn form() -> Node<Form, Open> {
     Node::new("form")
 }
 
 impl CanAddChildren for Form {}
 
-impl Node<Open, Form> {
+impl Node<Form, Open> {
     /// URL to which the form data is submitted.
     pub fn action(self, value: impl AsRef<str>) -> Self {
         self.attr("action", value)
@@ -530,13 +530,13 @@ impl Node<Open, Form> {
 pub struct Input;
 
 /// Represents an input field where users can enter data.
-pub fn input() -> Node<Void, Input> {
+pub fn input() -> Node<Input, Void> {
     Node::new_self_closing("input")
 }
 
-impl HasInputType for Node<Void, Input> {}
+impl HasInputType for Node<Input, Void> {}
 
-impl Node<Void, Input> {
+impl Node<Input, Void> {
     /// Name of the input control.
     pub fn name(self, value: impl AsRef<str>) -> Self {
         self.attr("name", value)
@@ -572,14 +572,14 @@ impl Node<Void, Input> {
 pub struct Button;
 
 /// Represents a clickable button.
-pub fn button() -> Node<Open, Button> {
+pub fn button() -> Node<Button, Open> {
     Node::new("button")
 }
 
 impl CanAddChildren for Button {}
 impl CanAddText for Button {}
 
-impl Node<Open, Button> {
+impl Node<Button, Open> {
     /// Type of button: "button", "submit", or "reset".
     pub fn type_(self, value: impl AsRef<str>) -> Self {
         self.attr("type", value)
@@ -605,13 +605,13 @@ impl Node<Open, Button> {
 pub struct Textarea;
 
 /// Represents a multi-line text input.
-pub fn textarea() -> Node<Open, Textarea> {
+pub fn textarea() -> Node<Textarea, Open> {
     Node::new("textarea")
 }
 
 impl CanAddText for Textarea {}
 
-impl Node<Open, Textarea> {
+impl Node<Textarea, Open> {
     /// Name of the textarea.
     pub fn name(self, value: impl AsRef<str>) -> Self {
         self.attr("name", value)
@@ -647,13 +647,13 @@ impl Node<Open, Textarea> {
 pub struct Select;
 
 /// Represents a drop-down list of options.
-pub fn select() -> Node<Open, Select> {
+pub fn select() -> Node<Select, Open> {
     Node::new("select")
 }
 
 impl CanAddChildren for Select {}
 
-impl Node<Open, Select> {
+impl Node<Select, Open> {
     /// Name of the select element.
     pub fn name(self, value: impl AsRef<str>) -> Self {
         self.attr("name", value)
@@ -679,13 +679,13 @@ impl Node<Open, Select> {
 pub struct OptionElement;
 
 /// Represents a single option inside a <select>.
-pub fn option() -> Node<Open, OptionElement> {
+pub fn option() -> Node<OptionElement, Open> {
     Node::new("option")
 }
 
 impl CanAddText for OptionElement {}
 
-impl Node<Open, OptionElement> {
+impl Node<OptionElement, Open> {
     /// Value of the option when submitted.
     pub fn value(self, value: impl AsRef<str>) -> Self {
         self.attr("value", value)
@@ -706,7 +706,7 @@ impl Node<Open, OptionElement> {
 pub struct Header;
 
 /// Represents introductory content or a set of navigational links.
-pub fn header() -> Node<Open, Header> {
+pub fn header() -> Node<Header, Open> {
     Node::new("header")
 }
 
@@ -717,7 +717,7 @@ impl CanAddText for Header {}
 pub struct Footer;
 
 /// Represents footer content for its nearest sectioning content.
-pub fn footer() -> Node<Open, Footer> {
+pub fn footer() -> Node<Footer, Open> {
     Node::new("footer")
 }
 
@@ -728,7 +728,7 @@ impl CanAddText for Footer {}
 pub struct Nav;
 
 /// Represents a section of navigation links.
-pub fn nav() -> Node<Open, Nav> {
+pub fn nav() -> Node<Nav, Open> {
     Node::new("nav")
 }
 
@@ -739,7 +739,7 @@ impl CanAddText for Nav {}
 pub struct Section;
 
 /// Represents a generic section of content.
-pub fn section() -> Node<Open, Section> {
+pub fn section() -> Node<Section, Open> {
     Node::new("section")
 }
 
@@ -750,7 +750,7 @@ impl CanAddText for Section {}
 pub struct Article;
 
 /// Represents a self-contained composition, such as a blog post or news article.
-pub fn article() -> Node<Open, Article> {
+pub fn article() -> Node<Article, Open> {
     Node::new("article")
 }
 
@@ -761,7 +761,7 @@ impl CanAddText for Article {}
 pub struct Aside;
 
 /// Represents content indirectly related to the main content (sidebar).
-pub fn aside() -> Node<Open, Aside> {
+pub fn aside() -> Node<Aside, Open> {
     Node::new("aside")
 }
 
@@ -772,7 +772,7 @@ impl CanAddText for Aside {}
 pub struct Main;
 
 /// Represents the dominant content of the <body> of a document.
-pub fn main() -> Node<Open, Main> {
+pub fn main() -> Node<Main, Open> {
     Node::new("main")
 }
 
@@ -783,7 +783,7 @@ impl CanAddText for Main {}
 pub struct Code;
 
 /// Represents a fragment of computer code.
-pub fn code() -> Node<Open, Code> {
+pub fn code() -> Node<Code, Open> {
     Node::new("code")
 }
 
@@ -794,7 +794,7 @@ impl CanAddText for Code {}
 pub struct Pre;
 
 /// Represents preformatted text.
-pub fn pre() -> Node<Open, Pre> {
+pub fn pre() -> Node<Pre, Open> {
     Node::new("pre")
 }
 
@@ -806,15 +806,15 @@ pub struct A;
 
 /// Together with its href attribute, creates a hyperlink to web pages, files, email addresses, locations within the
 /// current page, or anything else a URL can address.
-pub fn a() -> Node<Open, A> {
+pub fn a() -> Node<A, Open> {
     Node::new("a")
 }
 
 impl CanAddChildren for A {}
 impl CanAddText for A {}
-impl HasHref for Node<Open, A> {}
+impl HasHref for Node<A, Open> {}
 
-impl Node<Open, A> {
+impl Node<A, Open> {
     /// Indicates that the hyperlink is to be used for downloading a resource.
     pub fn download(self) -> Self {
         self.flag("download")
@@ -825,7 +825,7 @@ impl Node<Open, A> {
 pub struct B;
 
 /// Represents text with bold importance.
-pub fn b() -> Node<Open, B> {
+pub fn b() -> Node<B, Open> {
     Node::new("b")
 }
 
@@ -836,7 +836,7 @@ impl CanAddText for B {}
 pub struct I;
 
 /// Represents text in italics, usually for emphasis or stylistic purposes.
-pub fn i() -> Node<Open, I> {
+pub fn i() -> Node<I, Open> {
     Node::new("i")
 }
 
@@ -847,7 +847,7 @@ impl CanAddText for I {}
 pub struct U;
 
 /// Represents text that should be stylistically underlined.
-pub fn u() -> Node<Open, U> {
+pub fn u() -> Node<U, Open> {
     Node::new("u")
 }
 
@@ -858,7 +858,7 @@ impl CanAddText for U {}
 pub struct Strong;
 
 /// Represents text with strong importance.
-pub fn strong() -> Node<Open, Strong> {
+pub fn strong() -> Node<Strong, Open> {
     Node::new("strong")
 }
 
@@ -869,7 +869,7 @@ impl CanAddText for Strong {}
 pub struct Small;
 
 /// Represents smaller print text.
-pub fn small() -> Node<Open, Small> {
+pub fn small() -> Node<Small, Open> {
     Node::new("small")
 }
 
@@ -880,14 +880,14 @@ impl CanAddText for Small {}
 pub struct Label;
 
 /// Represents a label for a form control.
-pub fn label() -> Node<Open, Label> {
+pub fn label() -> Node<Label, Open> {
     Node::new("label")
 }
 
 impl CanAddChildren for Label {}
 impl CanAddText for Label {}
 
-impl Node<Open, Label> {
+impl Node<Label, Open> {
     /// Associates the label with a form control by its ID.
     pub fn for_(self, value: impl AsRef<str>) -> Self {
         self.attr("for", value)
@@ -898,14 +898,14 @@ impl Node<Open, Label> {
 pub struct Details;
 
 /// Represents a disclosure widget that users can open or close.
-pub fn details() -> Node<Open, Details> {
+pub fn details() -> Node<Details, Open> {
     Node::new("details")
 }
 
 impl CanAddChildren for Details {}
 impl CanAddText for Details {}
 
-impl Node<Open, Details> {
+impl Node<Details, Open> {
     /// Indicates whether the details should be open by default.
     pub fn open(self) -> Self {
         self.flag("open")
@@ -916,7 +916,7 @@ impl Node<Open, Details> {
 pub struct Summary;
 
 /// Represents a summary, visible in a <details> element.
-pub fn summary() -> Node<Open, Summary> {
+pub fn summary() -> Node<Summary, Open> {
     Node::new("summary")
 }
 
@@ -927,14 +927,14 @@ impl CanAddText for Summary {}
 pub struct Dialog;
 
 /// Represents a dialog box or interactive window.
-pub fn dialog() -> Node<Open, Dialog> {
+pub fn dialog() -> Node<Dialog, Open> {
     Node::new("dialog")
 }
 
 impl CanAddChildren for Dialog {}
 impl CanAddText for Dialog {}
 
-impl Node<Open, Dialog> {
+impl Node<Dialog, Open> {
     /// Indicates that the dialog is open.
     pub fn open(self) -> Self {
         self.flag("open")
@@ -945,7 +945,7 @@ impl Node<Open, Dialog> {
 pub struct Hr;
 
 /// Represents a thematic break (horizontal rule).
-pub fn hr() -> Node<Void, Hr> {
+pub fn hr() -> Node<Hr, Void> {
     Node::new_self_closing("hr")
 }
 
@@ -953,24 +953,24 @@ pub fn hr() -> Node<Void, Hr> {
 pub struct Base;
 
 /// Specifies the base URL and target for relative URLs.
-pub fn base() -> Node<Void, Base> {
+pub fn base() -> Node<Base, Void> {
     Node::new_self_closing("base")
 }
 
-impl HasHref for Node<Void, Base> {}
-impl HasTarget for Node<Void, Base> {}
+impl HasHref for Node<Base, Void> {}
+impl HasTarget for Node<Base, Void> {}
 
 // <script>
 pub struct Script;
 
-pub fn script() -> Node<Open, Script> {
+pub fn script() -> Node<Script, Open> {
     Node::new("script")
 }
 
 impl CanAddText for Script {}
-impl HasSrc for Node<Open, Script> {}
+impl HasSrc for Node<Script, Open> {}
 
-impl Node<Open, Script> {
+impl Node<Script, Open> {
     /// Executes the script asynchronously.
     pub fn async_(self) -> Self {
         self.flag("async")

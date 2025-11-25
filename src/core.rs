@@ -27,14 +27,14 @@ pub trait CanAddChildren {}
 
 pub trait CanAddText {}
 
-pub struct Node<State = Open, Tag = ()> {
+pub struct Node<Tag, State = Open> {
     tag: &'static [u8],
     buf: Vec<u8>,
     _state: PhantomData<State>,
     _tag: PhantomData<Tag>,
 }
 
-impl<Tag> Node<Open, Tag> {
+impl<Tag> Node<Tag, Open> {
     pub fn new(tag: &'static str) -> Self {
         let buf = Vec::with_capacity(128);
         Self::with_buffer(tag, buf)
@@ -52,7 +52,7 @@ impl<Tag> Node<Open, Tag> {
         }
     }
 
-    pub fn close(mut self) -> Node<Content, Tag> {
+    pub fn close(mut self) -> Node<Tag, Content> {
         self.buf.extend_from_slice(b">");
         Node {
             tag: self.tag,
@@ -78,7 +78,7 @@ pub fn normalize_attr_name(k: impl Into<Cow<'static, str>>) -> String {
         .collect()
 }
 
-impl<State, Tag> Node<State, Tag> {
+impl<State, Tag> Node<Tag, State> {
     pub fn map<Fn>(self, fun: Fn) -> Self
     where
         Fn: FnOnce(Self) -> Self,
@@ -94,9 +94,9 @@ impl<State, Tag> Node<State, Tag> {
     }
 }
 
-impl<T, Tag> HasAttributes for Node<T, Tag>
+impl<Tag, State> HasAttributes for Node<Tag, State>
 where
-    T: CanAddAttributes,
+    State: CanAddAttributes,
 {
     fn attr(mut self, k: impl Into<Cow<'static, str>>, v: impl AsRef<str>) -> Self {
         self.buf.push(b' ');
@@ -116,11 +116,11 @@ where
     }
 }
 
-impl<Tag> Node<Content, Tag>
+impl<Tag> Node<Tag, Content>
 where
     Tag: CanAddChildren,
 {
-    pub fn child(mut self, child: impl Renderable) -> Node<Content, Tag> {
+    pub fn child(mut self, child: impl Renderable) -> Node<Tag, Content> {
         child.render_into(&mut self.buf);
         self
     }
@@ -141,7 +141,7 @@ where
 
     pub fn child_when<Fn, T>(mut self, condition: bool, f: Fn) -> Self
     where
-        Fn: FnOnce() -> Node<Content, T>,
+        Fn: FnOnce() -> Node<T, Content>,
     {
         if condition {
             let child = f();
@@ -151,15 +151,15 @@ where
     }
 }
 
-impl<Tag> Node<Open, Tag>
+impl<Tag> Node<Tag, Open>
 where
     Tag: CanAddChildren,
 {
-    pub fn child(self, child: impl Renderable) -> Node<Content, Tag> {
+    pub fn child(self, child: impl Renderable) -> Node<Tag, Content> {
         self.close().child(child)
     }
 
-    pub fn children<It, Fn, T, R>(self, iter: It, fun: Fn) -> Node<Content, Tag>
+    pub fn children<It, Fn, T, R>(self, iter: It, fun: Fn) -> Node<Tag, Content>
     where
         It: IntoIterator<Item = T>,
         Fn: FnMut(T) -> R,
@@ -168,28 +168,28 @@ where
         self.close().children(iter, fun)
     }
 
-    pub fn child_when<Fn, T>(self, condition: bool, f: Fn) -> Node<Content, Tag>
+    pub fn child_when<Fn, T>(self, condition: bool, f: Fn) -> Node<Tag, Content>
     where
-        Fn: FnOnce() -> Node<Content, T>,
+        Fn: FnOnce() -> Node<T, Content>,
     {
         self.close().child_when(condition, f)
     }
 }
 
-impl<Tag> Node<Open, Tag>
+impl<Tag> Node<Tag, Open>
 where
     Tag: CanAddText,
 {
-    pub fn text(self, text: impl AsRef<str>) -> Node<Content, Tag> {
+    pub fn text(self, text: impl AsRef<str>) -> Node<Tag, Content> {
         self.close().text(text.as_ref())
     }
 
-    pub fn raw(self, text: impl AsRef<str>) -> Node<Content, Tag> {
+    pub fn raw(self, text: impl AsRef<str>) -> Node<Tag, Content> {
         self.close().raw(text.as_ref())
     }
 }
 
-impl<Tag> Node<Content, Tag>
+impl<Tag> Node<Tag, Content>
 where
     Tag: CanAddText,
 {
@@ -204,7 +204,7 @@ where
     }
 }
 
-impl<Tag> Node<Void, Tag> {
+impl<Tag> Node<Tag, Void> {
     pub fn new_self_closing(tag: &'static str) -> Self {
         let mut buf = Vec::with_capacity(128);
         buf.push(b'<');
@@ -225,7 +225,7 @@ pub trait Renderable {
     fn render(self) -> String;
 }
 
-impl<Tag> Renderable for Node<Open, Tag> {
+impl<Tag> Renderable for Node<Tag, Open> {
     fn render_into(self, buf: &mut Vec<u8>) {
         self.close().render_into(buf);
     }
@@ -235,7 +235,7 @@ impl<Tag> Renderable for Node<Open, Tag> {
     }
 }
 
-impl<Tag> Renderable for Node<Content, Tag> {
+impl<Tag> Renderable for Node<Tag, Content> {
     fn render_into(self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.buf);
 
@@ -252,7 +252,7 @@ impl<Tag> Renderable for Node<Content, Tag> {
     }
 }
 
-impl<Tag> Renderable for Node<Void, Tag> {
+impl<Tag> Renderable for Node<Tag, Void> {
     fn render_into(self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.buf);
         buf.extend_from_slice(b" />");
@@ -265,19 +265,19 @@ impl<Tag> Renderable for Node<Void, Tag> {
     }
 }
 
-impl<Tag> Into<String> for Node<Open, Tag> {
+impl<Tag> Into<String> for Node<Tag, Open> {
     fn into(self) -> String {
         self.render()
     }
 }
 
-impl<Tag> Into<String> for Node<Content, Tag> {
+impl<Tag> Into<String> for Node<Tag, Content> {
     fn into(self) -> String {
         self.render()
     }
 }
 
-impl<Tag> Into<String> for Node<Void, Tag> {
+impl<Tag> Into<String> for Node<Tag, Void> {
     fn into(self) -> String {
         self.render()
     }
