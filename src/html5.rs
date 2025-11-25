@@ -991,3 +991,31 @@ impl Node<Script, Open> {
         self.attr("type", value)
     }
 }
+
+// <ul>
+pub struct Ul;
+
+pub fn ul() -> Node<Ul, Open> {
+    Node::new("ul")
+}
+
+impl CanAddChildren for Ul {}
+
+// <ol>
+pub struct Ol;
+
+pub fn ol() -> Node<Ol, Open> {
+    Node::new("ol")
+}
+
+impl CanAddChildren for Ol {}
+
+// <li>
+pub struct Li;
+
+pub fn li() -> Node<Li, Open> {
+    Node::new("li")
+}
+
+impl CanAddChildren for Li {}
+impl CanAddText for Li {}
