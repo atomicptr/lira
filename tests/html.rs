@@ -432,3 +432,10 @@ fn test_into_string() {
     let res: String = div().text("Hello, World").into();
     assert_eq!("<div>Hello, World</div>", res);
 }
+
+#[test]
+fn test_layout_wrapping() {
+    let layout = |content| div().id("layout").child(content);
+    let res = div().text("Content").map(|n| layout(n)).render();
+    assert_eq!("<div id=\"layout\"><div>Content</div></div>", res);
+}
