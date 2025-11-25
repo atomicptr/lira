@@ -265,6 +265,24 @@ impl<Tag> Renderable for Node<Void, Tag> {
     }
 }
 
+impl<Tag> Into<String> for Node<Open, Tag> {
+    fn into(self) -> String {
+        self.render()
+    }
+}
+
+impl<Tag> Into<String> for Node<Content, Tag> {
+    fn into(self) -> String {
+        self.render()
+    }
+}
+
+impl<Tag> Into<String> for Node<Void, Tag> {
+    fn into(self) -> String {
+        self.render()
+    }
+}
+
 #[inline(always)]
 pub fn write_escaped(dest: &mut Vec<u8>, src: &str) {
     let bytes = src.as_bytes();

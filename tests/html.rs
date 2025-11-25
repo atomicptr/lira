@@ -426,3 +426,9 @@ fn test_map_when() {
         res
     );
 }
+
+#[test]
+fn test_into_string() {
+    let res: String = div().text("Hello, World").into();
+    assert_eq!("<div>Hello, World</div>", res);
+}
