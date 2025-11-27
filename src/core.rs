@@ -1,4 +1,6 @@
-use std::{borrow::Cow, marker::PhantomData};
+use std::marker::PhantomData;
+
+const DEFAULT_BUFFER_CAPACITY: usize = 128;
 
 pub trait CanAddAttributes {}
 
@@ -17,10 +19,10 @@ impl CanAddAttributes for Void {}
 
 pub trait HasAttributes {
     /// Add a custom attribute to the element
-    fn attr(self, k: impl Into<Cow<'static, str>>, v: impl AsRef<str>) -> Self;
+    fn attr(self, k: impl AsRef<str>, v: impl AsRef<str>) -> Self;
 
     /// Add a boolean attribute to the element
-    fn flag(self, k: impl Into<Cow<'static, str>>) -> Self;
+    fn flag(self, k: impl AsRef<str>) -> Self;
 }
 
 pub trait CanAddChildren {}
@@ -36,7 +38,7 @@ pub struct Node<Tag, State = Open> {
 
 impl<Tag> Node<Tag, Open> {
     pub fn new(tag: &'static str) -> Self {
-        let buf = Vec::with_capacity(128);
+        let buf = Vec::with_capacity(DEFAULT_BUFFER_CAPACITY);
         Self::with_buffer(tag, buf)
     }
 
@@ -63,32 +65,17 @@ impl<Tag> Node<Tag, Open> {
     }
 }
 
-pub fn normalize_attr_name(k: impl Into<Cow<'static, str>>) -> String {
-    k.into()
-        .chars()
-        .map(|c| {
-            if c.is_ascii_uppercase() {
-                c.to_ascii_lowercase()
-            } else if c == '_' {
-                '-'
-            } else {
-                c
-            }
-        })
-        .collect()
-}
-
 impl<State, Tag> Node<Tag, State> {
-    pub fn map<Fn>(self, fun: Fn) -> Self
+    pub fn map<F>(self, fun: F) -> Self
     where
-        Fn: FnOnce(Self) -> Self,
+        F: FnOnce(Self) -> Self,
     {
         fun(self)
     }
 
-    pub fn map_when<Fn>(self, condition: bool, fun: Fn) -> Self
+    pub fn map_when<F>(self, condition: bool, fun: F) -> Self
     where
-        Fn: FnOnce(Self) -> Self,
+        F: FnOnce(Self) -> Self,
     {
         if condition { fun(self) } else { self }
     }
@@ -98,20 +85,25 @@ impl<Tag, State> HasAttributes for Node<Tag, State>
 where
     State: CanAddAttributes,
 {
-    fn attr(mut self, k: impl Into<Cow<'static, str>>, v: impl AsRef<str>) -> Self {
+    fn attr(mut self, k: impl AsRef<str>, v: impl AsRef<str>) -> Self {
+        let k = k.as_ref();
+        let v = v.as_ref();
+        self.buf.reserve(k.len() + v.len() + 8);
+
         self.buf.push(b' ');
-        self.buf
-            .extend_from_slice(normalize_attr_name(k).as_bytes());
+        write_normalized(&mut self.buf, k);
         self.buf.extend_from_slice(b"=\"");
-        write_escaped(&mut self.buf, v.as_ref());
+        write_escaped(&mut self.buf, v);
         self.buf.push(b'"');
         self
     }
 
-    fn flag(mut self, k: impl Into<Cow<'static, str>>) -> Self {
+    fn flag(mut self, k: impl AsRef<str>) -> Self {
+        let k = k.as_ref();
+        self.buf.reserve(k.len() + 8);
+
         self.buf.push(b' ');
-        self.buf
-            .extend_from_slice(normalize_attr_name(k).as_bytes());
+        write_normalized(&mut self.buf, k);
         self
     }
 }
@@ -206,7 +198,7 @@ where
 
 impl<Tag> Node<Tag, Void> {
     pub fn new_self_closing(tag: &'static str) -> Self {
-        let mut buf = Vec::with_capacity(128);
+        let mut buf = Vec::with_capacity(DEFAULT_BUFFER_CAPACITY);
         buf.push(b'<');
         buf.extend_from_slice(tag.as_bytes());
 
@@ -245,10 +237,13 @@ impl<Tag> Renderable for Node<Tag, Content> {
         buf.push(b'>');
     }
 
-    fn render(self) -> String {
-        let mut buf = Vec::with_capacity(self.buf.capacity() + self.tag.len() + 3);
-        self.render_into(&mut buf);
-        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
+    fn render(mut self) -> String {
+        // close tag
+        self.buf.extend_from_slice(b"</");
+        self.buf.extend_from_slice(self.tag);
+        self.buf.push(b'>');
+
+        String::from_utf8(self.buf).expect("Internal Error: Invalid UTF-8")
     }
 }
 
@@ -258,10 +253,10 @@ impl<Tag> Renderable for Node<Tag, Void> {
         buf.extend_from_slice(b" />");
     }
 
-    fn render(self) -> String {
-        let mut buf = Vec::with_capacity(self.buf.capacity() + 3);
-        self.render_into(&mut buf);
-        String::from_utf8(buf).expect("Internal Error: Invalid UTF-8")
+    fn render(mut self) -> String {
+        self.buf.extend_from_slice(b" />");
+
+        String::from_utf8(self.buf).expect("Internal Error: Invalid UTF-8")
     }
 }
 
@@ -284,42 +279,56 @@ impl<Tag> Into<String> for Node<Tag, Void> {
 }
 
 #[inline(always)]
+fn write_normalized(dest: &mut Vec<u8>, k: &str) {
+    let bytes = k.as_bytes();
+
+    if !bytes.iter().any(|&b| b == b'_' || (b >= b'A' && b <= b'Z')) {
+        dest.extend_from_slice(bytes);
+        return;
+    }
+
+    dest.reserve(bytes.len());
+
+    for &b in bytes {
+        dest.push(match b {
+            b'A'..=b'Z' => b + 32,
+            b'_' => b'-',
+            _ => b,
+        });
+    }
+}
+
+#[inline(always)]
 pub fn write_escaped(dest: &mut Vec<u8>, src: &str) {
     let bytes = src.as_bytes();
-    let mut i = 0;
     let len = bytes.len();
 
-    while i < len {
-        let b = bytes[i];
-        match b {
-            b'&' => {
-                dest.extend_from_slice(b"&amp;");
-            }
-            b'<' => {
-                dest.extend_from_slice(b"&lt;");
-            }
-            b'>' => {
-                dest.extend_from_slice(b"&gt;");
-            }
-            b'"' => {
-                dest.extend_from_slice(b"&quot;");
-            }
-            b'\'' => {
-                dest.extend_from_slice(b"&#39;");
-            }
-            _ => {
-                let start = i;
-
-                i += 1;
-
-                while i < len && !matches!(bytes[i], b'&' | b'<' | b'>' | b'"' | b'\'') {
-                    i += 1;
-                }
-
-                dest.extend_from_slice(&bytes[start..i]);
-                continue;
-            }
-        }
-        i += 1;
+    if !bytes
+        .iter()
+        .any(|&b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''))
+    {
+        dest.extend_from_slice(bytes);
+        return;
     }
+
+    dest.reserve(len / 10);
+
+    let mut start = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        let entity = match b {
+            b'&' => Some(&b"&amp;"[..]),
+            b'<' => Some(&b"&lt;"[..]),
+            b'>' => Some(&b"&gt;"[..]),
+            b'"' => Some(&b"&quot;"[..]),
+            b'\'' => Some(&b"&#39;"[..]),
+            _ => None,
+        };
+
+        if let Some(ent) = entity {
+            dest.extend_from_slice(&bytes[start..i]);
+            dest.extend_from_slice(ent);
+            start = i + 1;
+        }
+    }
+    dest.extend_from_slice(&bytes[start..]);
 }

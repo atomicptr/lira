@@ -1,6 +1,4 @@
-use crate::core::{
-    CanAddChildren, CanAddText, HasAttributes, Node, Open, Void, normalize_attr_name,
-};
+use crate::core::{CanAddChildren, CanAddText, HasAttributes, Node, Open, Void};
 
 // attributes
 
@@ -81,7 +79,7 @@ pub trait HasGlobalAttributes: HasAttributes + Sized {
     where
         Self: Sized + HasAttributes,
     {
-        self.attr(format!("data-{}", normalize_attr_name(key)), value)
+        self.attr(format!("data-{}", key).as_str(), value)
     }
 }
 
